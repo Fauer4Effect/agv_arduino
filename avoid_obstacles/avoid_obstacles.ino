@@ -1,4 +1,5 @@
 #include <Servo.h> 
+#include <QueueList.h>
  
 Servo servo1;   //right side
 Servo servo2;   //left side
@@ -13,6 +14,19 @@ const int irLedRight = 4;
 const int irDetRight = 5;
 
 const int freq = 38000;
+int next;
+
+//-----------------------------------------------------------
+//Queue Entry Key
+//0 -> forwards
+//1 -> right_90
+//2 -> left_90
+//3 -> turn_180
+//4 -> stop
+
+QueueList <int> nextQueue; //Queue of next instructions
+QueueList <int> prevQueue; //Queue of previous instructions
+//-----------------------------------------------------------
 
 void servoCenter() {
   servo1.attach(12);   
@@ -163,3 +177,48 @@ void loop() {
   //stop the motor everytime
   stop();
 } 
+
+
+// //Main loop
+// void loop() {
+//     //TODO if (physical or virtual barrier detected) (Ping sensor and IR sensor readings)
+//       stop();
+//       //if nextQueue previous or 2nd to last instruction was 1 (right_90) 
+//           //Clear nextQueue and prevQueue
+//           nextQueue.push(3); //turn_180
+//           nextQueue.push(0); //forwards
+//           nextQueue.push(0); //forwards
+//           nextQueue.push(1); //right_90
+//       //else 
+//           nextQueue.push(1); //right_90
+//           nextQueue.push(0); //forwards
+//           nextQueue.push(2); //left_90
+
+//     //TODO if (inside a dark room) (photoresistor code here)
+//           //if (light source detected)
+//               //if (light source < 6 inches away)
+//                   stop();
+//                   //clear next nextQueue and prevQueue
+//                   nextQueue.push(4);
+//               //else 
+//                   //Turn towards light source
+//     //else 
+//           //if (dark room detected) (photoresistor code here)
+//               //the turn towards room ***code should be about the same here as it is in the "if"***
+
+
+//     //Execute next instruction subroutine
+//     if (nextQueue.isEmpty) {
+//       prevQueue.push(0);
+//       forwards();
+//     }
+//     else {
+//       next = nextQueue.pop();
+//       prevQueue.push(next);
+//       if (0 == next) forwards();
+//       else if (1 == next) right_90();
+//       else if (2 == next) left_90();
+//       else if (3 == next) turn_180();
+//       else if (4 == next) stop();
+//     }
+// }
