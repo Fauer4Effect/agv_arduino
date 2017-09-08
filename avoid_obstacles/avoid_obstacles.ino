@@ -154,7 +154,7 @@ void right_90() {
   for (i = 0; i < dur*18; i ++){
     servo1.writeMicroseconds(1250);
     servo2.writeMicroseconds(1750);
-    delay(10);
+    delay(15);
   }  
 }
 
@@ -164,7 +164,7 @@ void left_90(){
   for (i=0;i<dur*18;i++){
     servo1.writeMicroseconds(1750);
     servo2.writeMicroseconds(1250);
-    delay(10);
+    delay(15);
   }
 }
 
@@ -207,6 +207,7 @@ void setup() {
   last = 0;
   leftBaseline = readLightSensor(lightPinLeft);
   rightBaseline = readLightSensor(lightPinRight);
+  dark = 0;
 } 
  
 void loop() { 
@@ -224,6 +225,18 @@ void loop() {
   int lightRight;
   lightRight = readLightSensor(lightPinRight);
 
+  int leftPoll, rightPoll;
+  leftPoll = 0;
+  rightPoll = 0;
+  leftPoll += irRead(irLedLeft, irDetLeft);
+  leftPoll += irRead(irLedLeft, irDetLeft);
+  rightPoll += irRead(irLedRight, irDetRight);
+  rightPoll += irRead(irLedRight, irDetRight);
+
+  if((lightLeft < 200) && (lightRight < 200)){
+    dark = 1;
+  }
+
   //TODO if one side sees tape turn other way
   //if both see tape reverse
   if((inches < 12) || ((irLeft == 0) && (irRight == 0))) {
@@ -240,51 +253,65 @@ void loop() {
     }
   }
 
-  else if(irLeft == 0){
-    right_90();
-    last = 1;
-    two_back = 0;
-  }
-  else if(irRight == 0){
-    left_90();
-    last = 2;
-    two_back = 0;
-  }
-
-  else if((lightLeft + 200) <= lightRight) {
-    left_90();
-  }
-  else if((lightRight + 200) <= lightLeft) {
-    right_90();
-  }
-  
-  else {
-    //get on course again after obstacle
-    if(last == 3){
-      forwards();
-      last = 0;
-      two_back = 3;
-    }
-    else if(two_back==3){
-      right_90();
-      last = 0;
-      two_back = 0;
-    }
-    else if(last == 1){
-      forwards();
-      last = 0;
-      two_back = 1;
-    }
-    else if(two_back == 1){
+  else if(dark == 1){
+    if((lightLeft + 200) >= lightRight){
       left_90();
-      two_back = last;
-      last = 2;
-      
     }
-    //no obstacle go forwards
+    else if((lightRight + 200) >= lightLeft) {
+      right_90();
+    }
     else {
       forwards();
-      last = 0;
+    }
+  }
+
+  else if(dark == 0){
+    if((lightLeft + 200) <= lightRight) {
+      left_90();
+    }
+    else if((lightRight + 200) <= lightLeft) {
+      right_90();
+    }
+    
+    else if(leftPoll == 0){
+      right_90();
+      last = 1;
+      two_back = 0;
+    }
+    else if(rightPoll == 0){
+      left_90();
+      last = 2;
+      two_back = 0;
+    }
+  
+    else {
+      //get on course again after obstacle
+      if(last == 3){
+        forwards();
+        last = 0;
+        two_back = 3;
+      }
+      else if(two_back==3){
+        right_90();
+        last = 0;
+        two_back = 0;
+      }
+      else if(last == 1){
+        forwards();
+        last = 0;
+        two_back = 1;
+      }
+      else if(two_back == 1){
+        left_90();
+        two_back = last;
+        last = 2;
+        
+      }
+      //no obstacle go forwards
+      else {
+        forwards();
+        last = 0;
+      }
     }
   }
 
