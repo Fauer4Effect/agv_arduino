@@ -91,6 +91,7 @@ const int lightPinLeft = A1;
 
 int last, two_back;
 int leftBaseline, rightBaseline;
+int dark;
 
 /*0 -> forwards
 1 -> right_90
@@ -98,9 +99,6 @@ int leftBaseline, rightBaseline;
 3 -> turn_180
 4 -> stop*/
 
-QueueList <int> nextQueue; //Queue of next instructions
-QueueList <int> prevQueue; //Queue of previous instructions
-//-----------------------------------------------------------
 
 void servoCenter() {
   servo1.attach(12);   
@@ -153,20 +151,20 @@ int readLightSensor(int sensorPin){
 //turn 90 deg right
 void right_90() {
   Serial.println("RIGHT");
-  for (i = 0; i < dur*20; i ++){
+  for (i = 0; i < dur*18; i ++){
     servo1.writeMicroseconds(1250);
     servo2.writeMicroseconds(1750);
-    delay(15);
+    delay(10);
   }  
 }
 
 //turn 90 deg left
 void left_90(){
   Serial.println("LEFT");
-  for (i=0;i<dur*20;i++){
+  for (i=0;i<dur*18;i++){
     servo1.writeMicroseconds(1750);
     servo2.writeMicroseconds(1250);
-    delay(15);
+    delay(10);
   }
 }
 
@@ -242,6 +240,17 @@ void loop() {
     }
   }
 
+  else if(irLeft == 0){
+    right_90();
+    last = 1;
+    two_back = 0;
+  }
+  else if(irRight == 0){
+    left_90();
+    last = 2;
+    two_back = 0;
+  }
+
   else if((lightLeft + 200) <= lightRight) {
     left_90();
   }
@@ -281,51 +290,6 @@ void loop() {
 
   //stop the motor everytime
   stop();
-  delay(500);
+  //delay(500);
 } 
 
-
-// //Main loop
-// void loop() {
-//     //TODO if (physical or virtual barrier detected) (Ping sensor and IR sensor readings)
-//       stop();
-//       //if nextQueue previous or 2nd to last instruction was 1 (right_90) 
-//           //Clear nextQueue and prevQueue
-//           nextQueue.push(3); //turn_180
-//           nextQueue.push(0); //forwards
-//           nextQueue.push(0); //forwards
-//           nextQueue.push(1); //right_90
-//       //else 
-//           nextQueue.push(1); //right_90
-//           nextQueue.push(0); //forwards
-//           nextQueue.push(2); //left_90
-
-//     //TODO if (inside a dark room) (photoresistor code here)
-//           //if (light source detected)
-//               //if (light source < 6 inches away)
-//                   stop();
-//                   //clear next nextQueue and prevQueue
-//                   nextQueue.push(4);
-//               //else 
-//                   //Turn towards light source
-//     //else 
-//           //if (dark room detected) (photoresistor code here)
-//               //the turn towards room ***code should be about the same here as it is in the "if"***
-
-
-//     //Execute next instruction subroutine
-//     if (nextQueue.isEmpty) {
-//       prevQueue.push(0);
-//       forwards();
-//     }
-//     else {
-//       next = nextQueue.pop();
-//       prevQueue.push(next);
-//       if(nextQueue.isEmpty) forwards();
-//       else if (0 == next) forwards();
-//       else if (1 == next) right_90();
-//       else if (2 == next) left_90();
-//       else if (3 == next) turn_180();
-//       else if (4 == next) stop();
-//     }
-// }
