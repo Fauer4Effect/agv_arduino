@@ -175,7 +175,7 @@ void left_90(){
 //go forwards
 void forwards() {
   Serial.println("FORWARDS");
-  for (i = 0; i < dur*15; i++){
+  for (i = 0; i < dur*25; i++){
     servo1.writeMicroseconds(1250);
     servo2.writeMicroseconds(1250);
     delay(10); 
@@ -222,7 +222,7 @@ void navigateLight(int inches, int irLeft, int irRight, int leftPoll,
       right_90();
       last = 1;
     }
-  }
+  }/*
   //turn away from walls on sides
   else if(leftPoll == 0) {
     right_90();
@@ -233,14 +233,14 @@ void navigateLight(int inches, int irLeft, int irRight, int leftPoll,
     left_90();
     last = 2;
     two_back = 0;
-  }
+  }*/
   //move towards darkened room
-  else if((lightLeft + 200) <= lightRight) {
+  else if((lightLeft + 100) <= lightRight) {
     left_90();
     last = 0;
     two_back = 0;
   }
-  else if((lightRight + 200) <= lightLeft) {
+  else if((lightRight + 100) <= lightLeft) {
     right_90();
     last = 0;
     two_back = 0;
@@ -302,11 +302,13 @@ void navigateDark(int inches, int irLeft, int irRight, int leftPoll,
     }
   }
   //turn towards light source
-  else if((lightLeft + 200) >= lightRight){
+  else if((lightLeft - 100) >= lightRight){
     left_90();
+    forwards();
   }
-  else if((lightRight + 200) >= lightLeft) {
+  else if((lightRight - 100) >= lightLeft) {
     right_90();
+    forwards();
   }
   //drive forwards
   else {
