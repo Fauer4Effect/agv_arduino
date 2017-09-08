@@ -163,7 +163,7 @@ void right_90() {
 //turn 90 deg left
 void left_90(){
   Serial.println("LEFT");
-  for (i=0;i>dur*20;i++){
+  for (i=0;i<dur*20;i++){
     servo1.writeMicroseconds(1750);
     servo2.writeMicroseconds(1250);
     delay(15);
