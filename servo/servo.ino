@@ -102,6 +102,13 @@ void loop()
      delay(15);  
     }
   }
+  else {
+    for (i=0;i<dur*20;i++){
+      myservo.writeMicroseconds(1750);
+      serv2.writeMicroseconds(1250);
+      delay(15);
+    }
+  }
   myservo.writeMicroseconds(1500);
    serv2.writeMicroseconds(1500);// motor stop 
 } 

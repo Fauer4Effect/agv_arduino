@@ -1,3 +1,73 @@
+/*  
+  Code to operate the MMP-5 with a Sabertooth Motor Controller set to R/C mode
+  The Sabertooth expects to receive a "center" or "stop" position first (as if the R/C 
+  joystick was in the neutral position.
+  Then it expect to receive the end limits.
+  If this code is not executed when the controller is powered up, the MMP-5 may move
+  eratically or not at all
+  COL Lisa A. Shay
+
+----------------------------------------------------------------------------------------------
+
+  Ping))) Sensor
+
+  This sketch reads a PING))) ultrasonic rangefinder and returns the distance
+  to the closest object in range. To do this, it sends a pulse to the sensor to
+  initiate a reading, then listens for a pulse to return. The length of the
+  returning pulse is proportional to the distance of the object from the sensor.
+
+  The circuit:
+    - +V connection of the PING))) attached to +5V
+    - GND connection of the PING))) attached to ground
+    - SIG connection of the PING))) attached to digital pin 7
+
+  created 3 Nov 2008
+  by David A. Mellis
+  modified 30 Aug 2011
+  by Tom Igoe
+
+  This example code is in the public domain.
+
+  http://www.arduino.cc/en/Tutorial/Ping
+
+----------------------------------------------------------------------------------------------
+
+ http://learn.parallax.com/tutorials/robot/shield-bot/robotics-board-education-shield-arduino/chapter-7-navigating-infrared-9
+ Robotics with the BOE Shield - TestLeftIR
+ Display 1 if the left IR detector does not detect an object,
+ or 0 if it does.
+ 
+----------------------------------------------------------------------------------------------
+
+  Analog Input
+
+  Demonstrates analog input by reading an analog sensor on analog pin 0 and
+  turning on and off a light emitting diode(LED) connected to digital pin 13.
+  The amount of time the LED will be on and off depends on the value obtained
+  by analogRead().
+
+  The circuit:
+  - potentiometer
+    center pin of the potentiometer to the analog input 0
+    one side pin (either one) to ground
+    the other side pin to +5V
+  - LED
+    anode (long leg) attached to digital output 13
+    cathode (short leg) attached to ground
+
+  - Note: because most Arduinos have a built-in LED attached to pin 13 on the
+    board, the LED is optional.
+
+  created by David Cuartielles
+  modified 30 Aug 2011
+  By Tom Igoe
+
+  This example code is in the public domain.
+
+  http://www.arduino.cc/en/Tutorial/AnalogInput
+
+*/
+
 #include <Servo.h> 
 #include <QueueList.h>
  
@@ -16,13 +86,17 @@ const int irDetRight = 5;
 const int freq = 38000;
 int next;
 
-//-----------------------------------------------------------
-//Queue Entry Key
-//0 -> forwards
-//1 -> right_90
-//2 -> left_90
-//3 -> turn_180
-//4 -> stop
+const int lightPinRight = A0;
+const int lightPinLeft = A1;
+
+int last, two_back;
+int leftBaseline, rightBaseline;
+
+/*0 -> forwards
+1 -> right_90
+2 -> left_90
+3 -> turn_180
+4 -> stop*/
 
 QueueList <int> nextQueue; //Queue of next instructions
 QueueList <int> prevQueue; //Queue of previous instructions
@@ -72,8 +146,13 @@ long getDistance(){
   return duration / 74 / 2;
 }
 
+int readLightSensor(int sensorPin){
+  return analogRead(sensorPin);
+}
+
 //turn 90 deg right
 void right_90() {
+  Serial.println("RIGHT");
   for (i = 0; i < dur*20; i ++){
     servo1.writeMicroseconds(1250);
     servo2.writeMicroseconds(1750);
@@ -83,6 +162,7 @@ void right_90() {
 
 //turn 90 deg left
 void left_90(){
+  Serial.println("LEFT");
   for (i=0;i>dur*20;i++){
     servo1.writeMicroseconds(1750);
     servo2.writeMicroseconds(1250);
@@ -92,7 +172,8 @@ void left_90(){
 
 //go forwards
 void forwards() {
-  for (i = 0; i< dur*5; i++){
+  Serial.println("FORWARDS");
+  for (i = 0; i< dur*15; i++){
     servo1.writeMicroseconds(1250);
     servo2.writeMicroseconds(1250);
     delay(10);   //TODO figure out if this is what causes the problems.
@@ -105,6 +186,7 @@ void stop() {
 }
 
 void turn_180() {
+  Serial.println("180");
   right_90();
   right_90();
 }
@@ -124,6 +206,9 @@ void setup() {
   pinMode(irLedRight, OUTPUT);
   pinMode(irDetRight, INPUT);
   servoCenter(); 
+  last = 0;
+  leftBaseline = readLightSensor(lightPinLeft);
+  rightBaseline = readLightSensor(lightPinRight);
 } 
  
 void loop() { 
@@ -136,46 +221,67 @@ void loop() {
   int irRight;
   irRight = irRead(irLedRight, irDetRight);
 
+  int lightLeft;
+  lightLeft = readLightSensor(lightPinLeft);
+  int lightRight;
+  lightRight = readLightSensor(lightPinRight);
+
   //TODO if one side sees tape turn other way
   //if both see tape reverse
+  if((inches < 12) || ((irLeft == 0) && (irRight == 0))) {
+    stop();
+    if(last == 1) {
+      Serial.println("CORNERED"); 
+      turn_180();
+      last = 3;
+    }  
+    else{
+      Serial.println("WALL");
+      right_90();
+      last = 1;
+    }
+  }
 
-  Serial.print(inches);
-  Serial.println();
-  Serial.print("LEFT: ");
-  Serial.print(irLeft);
-  Serial.print("    RIGHT: ");
-  Serial.print(irRight);
-  Serial.println();
-
-  //if distance > 12 drive forwards
-  //FIXME figure out how to stop farther from obstacle
-  /*if(inches > 12) {
-    forwards();
-  }
-  //else turn
-  else {
-    right_90();
-  }
-  */
-
-  if(inches < 12) {
-    right_90();
-  }
-  else if(irLeft == 0 && irRight == 0) {
-    turn_180();
-  }
-  else if(irLeft == 0) {
-    right_90();
-  }
-  else if(irRight == 0) {
+  else if((lightLeft + 200) <= lightRight) {
     left_90();
   }
+  else if((lightRight + 200) <= lightLeft) {
+    right_90();
+  }
+  
   else {
-    forwards();
+    //get on course again after obstacle
+    if(last == 3){
+      forwards();
+      last = 0;
+      two_back = 3;
+    }
+    else if(two_back==3){
+      right_90();
+      last = 0;
+      two_back = 0;
+    }
+    else if(last == 1){
+      forwards();
+      last = 0;
+      two_back = 1;
+    }
+    else if(two_back == 1){
+      left_90();
+      two_back = last;
+      last = 2;
+      
+    }
+    //no obstacle go forwards
+    else {
+      forwards();
+      last = 0;
+    }
   }
 
   //stop the motor everytime
   stop();
+  delay(500);
 } 
 
 
@@ -215,7 +321,8 @@ void loop() {
 //     else {
 //       next = nextQueue.pop();
 //       prevQueue.push(next);
-//       if (0 == next) forwards();
+//       if(nextQueue.isEmpty) forwards();
+//       else if (0 == next) forwards();
 //       else if (1 == next) right_90();
 //       else if (2 == next) left_90();
 //       else if (3 == next) turn_180();
