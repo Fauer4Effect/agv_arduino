@@ -69,22 +69,19 @@
 */
 
 #include <Servo.h> 
-#include <QueueList.h>
  
 Servo servo1;   //right side
 Servo servo2;   //left side
  
 int i = 0;      
 const int dur = 2;
-//WTF only works on pin 7?  
-const int pingPin = 7;
+const int pingPin = 7;    //WTF only works on pin 7?  
 const int irLedLeft = 9;
 const int irDetLeft = 10;
 const int irLedRight = 4;
 const int irDetRight = 5;
 
 const int freq = 38000;
-int next;
 
 const int lightPinRight = A0;
 const int lightPinLeft = A1;
@@ -99,32 +96,36 @@ int dark;
 3 -> turn_180
 4 -> stop*/
 
-
+//Initialize servos and calibrate
 void servoCenter() {
   servo1.attach(12);   
   servo2.attach(13);
 
+  //motor stop
   for (i = 0; i < dur; i++ ) { 
-    servo1.writeMicroseconds(1500);    // motor stop 
+    servo1.writeMicroseconds(1500);
     //servo2.writeMicroseconds(1500);   //WTF this breaks if included
     delay(15); 
   }
-  for (i = 0; i< dur; i++){
+  //full speed in one direction
+  for (i = 0; i< dur; i++) {
     servo1.writeMicroseconds(1000);
-    servo2.writeMicroseconds(1000); // full speed in one direction
+    servo2.writeMicroseconds(1000);
     delay(15);  
   } 
+  //full speed in other direction
   for (i = 0; i< dur; i++) {
     servo1.writeMicroseconds(2000);
-    servo2.writeMicroseconds(2000); // full speed in the other direction
+    servo2.writeMicroseconds(2000);
     delay(15);
   }  
+  //motor stop
   for (i = 0; i < dur; i++ ) { 
     servo1.writeMicroseconds(1500);
-    servo2.writeMicroseconds(1500);// motor stop 
+    servo2.writeMicroseconds(1500);
     delay(15); 
   }
-  delay(1000);
+  delay(500);
 }
 
 //get distance to obstacle from ping sensor
@@ -144,6 +145,7 @@ long getDistance(){
   return duration / 74 / 2;
 }
 
+//read photoresistor
 int readLightSensor(int sensorPin){
   return analogRead(sensorPin);
 }
@@ -151,7 +153,7 @@ int readLightSensor(int sensorPin){
 //turn 90 deg right
 void right_90() {
   Serial.println("RIGHT");
-  for (i = 0; i < dur*18; i ++){
+  for (i = 0; i < dur*18; i++){
     servo1.writeMicroseconds(1250);
     servo2.writeMicroseconds(1750);
     delay(15);
@@ -161,7 +163,7 @@ void right_90() {
 //turn 90 deg left
 void left_90(){
   Serial.println("LEFT");
-  for (i=0;i<dur*18;i++){
+  for (i = 0; i < dur*18; i++){
     servo1.writeMicroseconds(1750);
     servo2.writeMicroseconds(1250);
     delay(15);
@@ -171,24 +173,29 @@ void left_90(){
 //go forwards
 void forwards() {
   Serial.println("FORWARDS");
-  for (i = 0; i< dur*15; i++){
+  for (i = 0; i < dur*15; i++){
     servo1.writeMicroseconds(1250);
     servo2.writeMicroseconds(1250);
-    delay(10);   //TODO figure out if this is what causes the problems.
+    delay(10); 
   }
 }
 
+//stop motors
 void stop() {
   servo1.writeMicroseconds(1500);
   servo2.writeMicroseconds(1500); 
 }
 
+//turn 180 deg
 void turn_180() {
   Serial.println("180");
   right_90();
   right_90();
 }
 
+//read ir detectors
+//    return 1 if ir is captured ie no obstacle
+//    return 0 if no ir returns ie obstacle present
 int irRead(int irLed, int irDet) {
   tone(irLed,freq,8);
   delay(1);
@@ -196,22 +203,135 @@ int irRead(int irLed, int irDet) {
   delay(100);
   return ir;
 }
+
+//If robot still in hallway...
+void navigateLight(int inches, int irLeft, int irRight, int leftPoll,
+                   int rightPoll, int lightLeft, int lightRight) {
+  //avoid obstacles right in front
+  if((inches < 12) || ((itLeft == 0) && (irRight == 0))) {
+    stop();
+    if(last == 1) {
+      Serial.println("CORNERED");
+      turn_180();
+      last = 3;
+    }
+    else {
+      Serial.println("WALL");
+      right_90();
+      last = 1;
+    }
+  }
+  //turn away from walls on sides
+  else if(leftPoll == 0) {
+    right_90();
+    last = 1;
+    two_back = 0;
+  }
+  else if(rightPoll == 0) {
+    left_90();
+    last = 2;
+    two_back = 0;
+  }
+  //move towards darkened room
+  else if((lightLeft + 200) <= lightRight) {
+    left_90();
+    last = 0;
+    two_back = 0;
+  }
+  else if((lightRight + 200) <= lightLeft) {
+    right_90();
+    last = 0;
+    two_back = 0;
+  }
+  //get back on course after avoiding obstacle
+  else {
+    /*if robot was cornered
+        1) do 180
+        2) go forwards
+        3) right turn
+
+      if robot sees single wall in front
+        1) turn right
+        2) forward
+        3) left turn*/
+    if(last == 3){
+      forwards();
+      last = 0;
+      two_back = 3;
+    }
+    else if(two_back==3){
+      right_90();
+      last = 0;
+      two_back = 0;
+    }
+    else if(last == 1){
+      forwards();
+      last = 0;
+      two_back = 1;
+    }
+    else if(two_back == 1){
+      left_90();
+      two_back = last;
+      last = 2;
+      
+    }
+    else {
+      forwards();
+      last = 0;
+    }
+  }
+}
+
+//If robot in dark room...
+void navigateDark(int inches, int irLeft, int irRight, int leftPoll,
+                  int rightPoll, int lightLeft, int lightRight) {
+  //avoid obstacles right in front
+  if((inches < 12) || ((itLeft == 0) && (irRight == 0))) {
+    stop();
+    if(last == 1) {
+      Serial.println("CORNERED");
+      turn_180();
+      last = 3;
+    }
+    else {
+      Serial.println("WALL");
+      right_90();
+      last = 1;
+    }
+  }
+  //turn towards light source
+  else if((lightLeft + 200) >= lightRight){
+    left_90();
+  }
+  else if((lightRight + 200) >= lightLeft) {
+    right_90();
+  }
+  //drive forwards
+  else {
+    forwards();
+  }
+}
  
 void setup() { 
   Serial.begin(9600);
+
   pinMode(irLedLeft, OUTPUT);
   pinMode(irDetLeft, INPUT);
   pinMode(irLedRight, OUTPUT);
   pinMode(irDetRight, INPUT);
-  servoCenter(); 
-  last = 0;
+
   leftBaseline = readLightSensor(lightPinLeft);
   rightBaseline = readLightSensor(lightPinRight);
+  
+  servoCenter(); 
+  
+  last = 0;
+  two_back = 0;
   dark = 0;
 } 
  
 void loop() { 
-  //get distance to obstacle
+  //Read all sensors
   long inches;
   inches = getDistance();
 
@@ -233,86 +353,16 @@ void loop() {
   rightPoll += irRead(irLedRight, irDetRight);
   rightPoll += irRead(irLedRight, irDetRight);
 
+  //determine if in dark room
   if((lightLeft < 200) && (lightRight < 200)){
     dark = 1;
   }
 
-  //TODO if one side sees tape turn other way
-  //if both see tape reverse
-  if((inches < 12) || ((irLeft == 0) && (irRight == 0))) {
-    stop();
-    if(last == 1) {
-      Serial.println("CORNERED"); 
-      turn_180();
-      last = 3;
-    }  
-    else{
-      Serial.println("WALL");
-      right_90();
-      last = 1;
-    }
+  if(dark) {
+    navigateDark(inches, irLeft, irRight, leftPoll, rightPoll, lightLeft, lightRight);
   }
-
-  else if(dark == 1){
-    if((lightLeft + 200) >= lightRight){
-      left_90();
-    }
-    else if((lightRight + 200) >= lightLeft) {
-      right_90();
-    }
-    else {
-      forwards();
-    }
-  }
-
-  else if(dark == 0){
-    if((lightLeft + 200) <= lightRight) {
-      left_90();
-    }
-    else if((lightRight + 200) <= lightLeft) {
-      right_90();
-    }
-    
-    else if(leftPoll == 0){
-      right_90();
-      last = 1;
-      two_back = 0;
-    }
-    else if(rightPoll == 0){
-      left_90();
-      last = 2;
-      two_back = 0;
-    }
-  
-    else {
-      //get on course again after obstacle
-      if(last == 3){
-        forwards();
-        last = 0;
-        two_back = 3;
-      }
-      else if(two_back==3){
-        right_90();
-        last = 0;
-        two_back = 0;
-      }
-      else if(last == 1){
-        forwards();
-        last = 0;
-        two_back = 1;
-      }
-      else if(two_back == 1){
-        left_90();
-        two_back = last;
-        last = 2;
-        
-      }
-      //no obstacle go forwards
-      else {
-        forwards();
-        last = 0;
-      }
-    }
+  else {
+    navigateLight(inches, irLeft, irRight, leftPoll, rightPoll, lightLeft, lightRight);
   }
 
   //stop the motor everytime
