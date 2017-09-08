@@ -1,4 +1,6 @@
-/*  
+/*
+README Works Cited
+  
   Code to operate the MMP-5 with a Sabertooth Motor Controller set to R/C mode
   The Sabertooth expects to receive a "center" or "stop" position first (as if the R/C 
   joystick was in the neutral position.
@@ -208,7 +210,7 @@ int irRead(int irLed, int irDet) {
 void navigateLight(int inches, int irLeft, int irRight, int leftPoll,
                    int rightPoll, int lightLeft, int lightRight) {
   //avoid obstacles right in front
-  if((inches < 12) || ((itLeft == 0) && (irRight == 0))) {
+  if((inches < 12) || ((irLeft == 0) && (irRight == 0))) {
     stop();
     if(last == 1) {
       Serial.println("CORNERED");
@@ -286,7 +288,7 @@ void navigateLight(int inches, int irLeft, int irRight, int leftPoll,
 void navigateDark(int inches, int irLeft, int irRight, int leftPoll,
                   int rightPoll, int lightLeft, int lightRight) {
   //avoid obstacles right in front
-  if((inches < 12) || ((itLeft == 0) && (irRight == 0))) {
+  if((inches < 12) || ((irLeft == 0) && (irRight == 0))) {
     stop();
     if(last == 1) {
       Serial.println("CORNERED");
